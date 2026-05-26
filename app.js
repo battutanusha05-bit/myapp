@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 
 app.get('/', (req,res)=>{
-    res.send("Automatic CI/CD Pipeline Success!")
+    res.send("Webhook Auto Trigger Working!")
 })
 
 app.listen(3000)
