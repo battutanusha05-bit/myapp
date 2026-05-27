@@ -2,32 +2,42 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "myapp-image"
+        AWS_ACCOUNT_ID = "757709777104"
+        AWS_DEFAULT_REGION = "us-east-1"
+        IMAGE_REPO_NAME = "myapp"
+        IMAGE_TAG = "latest"
     }
 
     stages {
 
+        stage('Clone Source') {
+            steps {
+                git 'https://github.com/battutanusha05-bit/myapp.git'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'
+                sh 'docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .'
             }
         }
 
-        stage('Stop Old Container') {
+        stage('Tag Docker Image') {
             steps {
-                sh 'docker stop myapp || true'
-                sh 'docker rm myapp || true'
+                sh 'docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG'
             }
         }
 
-        stage('Run New Container') {
+        stage('Push Image to ECR') {
             steps {
-                sh '''
-                docker run -d \
-                --name myapp \
-                -p 80:3000 \
-                $IMAGE_NAME
-                '''
+                withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+
+                    sh '''
+                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+
+                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+                    '''
+                }
             }
         }
     }
